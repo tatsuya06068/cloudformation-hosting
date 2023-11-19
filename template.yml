@@ -1,0 +1,15 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Parameters:
+  EnvName:
+    Type: String
+  HostingBucketName:
+    Type: String
+
+Resources:
+  S3:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://s3.amazonaws.com/mybucketwebcloud/s3.yml
+      Parameters:
+        BucketName: !Join ["-", [!Ref EnvName, !Ref HostingBucketName]]

@@ -1,0 +1,8 @@
+{
+    "Parameters":{
+        "EnvName": "dev",
+        "HostingBucketName": "hosting-web"
+    }
+}
+
+
