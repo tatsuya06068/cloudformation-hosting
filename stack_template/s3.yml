@@ -6,15 +6,52 @@ Parameters:
 Resources:
   S3Bucket:
     Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
     Properties:
       BucketName: !Ref BucketName
-      AccessControl: Private
+      LifecycleConfiguration:
+        Rules:
+          - Id: NoncurrentVersionExpiration
+            Status: Enabled
+            NoncurrentVersionExpirationInDays: 45
       PublicAccessBlockConfiguration:
-        BlockPublicAcls: True
-        BlockPublicPolicy: True
-        IgnorePublicAcls: True
-        RestrictPublicBuckets: True
-
-Outputs:
-  S3BucketName:
-    Value: !Ref S3Bucket
+        BlockPublicAcls: true
+        BlockPublicPolicy: false
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: false
+      VersioningConfiguration:
+        Status: Enabled
+      WebsiteConfiguration:
+        IndexDocument: index.html
+        ErrorDocument: 404.html
+      Tags:
+        - Key: CloudFormationArn
+          Value: !Ref BucketName
+  S3BucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref 'S3Bucket'
+      PolicyDocument:
+        Id: !Join ["-", [!Ref BucketName, "BucketPolicy"]]
+        Statement:
+          - Sid: AddPerm
+            Effect: Allow
+            Principal: '*'
+            Action:
+              - s3:GetObject
+            Resource:
+              - !Join ["", ["arn:aws:s3:::", !Ref BucketName, "/*"]]
+            Condition:
+              StringEquals:
+                aws:UserAgent: Amazon CloudFront
+          - Sid: AddPerm
+            Effect: Allow
+            Principal: '*'
+            Action:
+              - s3:GetObject
+            Resource:
+              - !Join ["", ["arn:aws:s3:::", !Ref BucketName, "/*"]]
+            Condition:
+              IpAddress:
+                aws:SourceIp:
+                  - 127.0.0.1/32
