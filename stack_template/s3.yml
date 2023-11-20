@@ -27,6 +27,32 @@ Resources:
       Tags:
         - Key: CloudFormationArn
           Value: !Ref BucketName
+  S3BucketAccesslogs:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    Properties:
+      AccessControl: LogDeliveryWrite
+      OwnershipControls:
+        Rules:
+        - ObjectOwnership: ObjectWriter
+      BucketName: !Join ["-", ["accesslogs", !Ref BucketName]]
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      LifecycleConfiguration:
+        Rules:
+          - Id: AutoDelete
+            Status: Enabled
+            ExpirationInDays: 15
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      Tags:
+        - Key: CloudFormationArn
+          Value: !Ref BucketName
   S3BucketPolicy:
     Type: AWS::S3::BucketPolicy
     Properties:

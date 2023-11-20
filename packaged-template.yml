@@ -15,3 +15,13 @@ Resources:
           - '-'
           - - Ref: EnvName
             - Ref: HostingBucketName
+  CloudFront:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://s3.amazonaws.com/mybucketwebcloud/cloud-front.yml
+      Parameters:
+        BucketName:
+          Fn::Join:
+          - '-'
+          - - Ref: EnvName
+            - Ref: HostingBucketName
