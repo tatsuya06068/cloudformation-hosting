@@ -5,6 +5,8 @@ Parameters:
     Type: String
   HostingBucketName:
     Type: String
+  DomainName:
+    Type: String
 
 Resources:
   S3:
@@ -19,3 +21,4 @@ Resources:
       TemplateURL: resources/cloudfront.yml
       Parameters:
         BucketName: !Join ["-", [!Ref EnvName, !Ref HostingBucketName]]
+        DomainName: !Ref DomainName

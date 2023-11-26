@@ -2,11 +2,15 @@ AWSTemplateFormatVersion: '2010-09-09'
 Parameters:
   BucketName:
     Type: String
+  DomainName:
+    Type: String
 Resources:
   CloudFrontDistribution:
     Type: AWS::CloudFront::Distribution
     Properties:
       DistributionConfig:
+        Aliases:
+          - !Ref DomainName
         Origins:
           - Id: CustomOrigin
             DomainName: !Sub '${BucketName}.s3-website-ap-northeast-1.amazonaws.com'
