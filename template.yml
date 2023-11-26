@@ -10,12 +10,12 @@ Resources:
   S3:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: https://s3.amazonaws.com/mybucketwebcloud/s3.yml
+      TemplateURL: resources/s3.yml
       Parameters:
         BucketName: !Join ["-", [!Ref EnvName, !Ref HostingBucketName]]
   CloudFront:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: https://s3.amazonaws.com/mybucketwebcloud/cloud-front.yml
+      TemplateURL: resources/cloudfront.yml
       Parameters:
         BucketName: !Join ["-", [!Ref EnvName, !Ref HostingBucketName]]

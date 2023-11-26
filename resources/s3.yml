@@ -35,7 +35,7 @@ Resources:
       OwnershipControls:
         Rules:
         - ObjectOwnership: ObjectWriter
-      BucketName: !Join ["-", ["accesslogs", !Ref BucketName]]
+      BucketName: !Sub 'accesslogs-${BucketName}'
       BucketEncryption:
         ServerSideEncryptionConfiguration:
           - ServerSideEncryptionByDefault:
@@ -44,7 +44,7 @@ Resources:
         Rules:
           - Id: AutoDelete
             Status: Enabled
-            ExpirationInDays: 15
+            ExpirationInDays: 1825 # 5年
       PublicAccessBlockConfiguration:
         BlockPublicAcls: true
         BlockPublicPolicy: true

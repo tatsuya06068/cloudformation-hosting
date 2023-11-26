@@ -8,7 +8,7 @@ Resources:
   S3:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: https://s3.amazonaws.com/mybucketwebcloud/s3.yml
+      TemplateURL: https://s3.ap-northeast-1.amazonaws.com/mybucketwebcloud/4cf2098e15bcfbbb7edad9ed98c5237b.template
       Parameters:
         BucketName:
           Fn::Join:
@@ -18,7 +18,7 @@ Resources:
   CloudFront:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: https://s3.amazonaws.com/mybucketwebcloud/cloud-front.yml
+      TemplateURL: https://s3.ap-northeast-1.amazonaws.com/mybucketwebcloud/bf2398b43e783d27dd3c61943d4f3b37.template
       Parameters:
         BucketName:
           Fn::Join:

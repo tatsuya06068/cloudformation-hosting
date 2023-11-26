@@ -21,9 +21,13 @@ Resources:
           Prefix: !Sub 'myprefix/'
         CustomErrorResponses:
           - ErrorCachingMinTTL: 300
-            ErrorCode: 403
+            ErrorCode: 404
             ResponseCode: 200
-            ResponsePagePath: /index.html
+            ResponsePagePath: /404.html
+          - ErrorCachingMinTTL: 300
+            ErrorCode: 500
+            ResponseCode: 200
+            ResponsePagePath: /500.html
         Comment: !Sub '${AWS::StackName}-distribution'
         DefaultCacheBehavior:
           TargetOriginId: CustomOrigin
