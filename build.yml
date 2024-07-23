@@ -1,0 +1,42 @@
+name: Blue-Green Deployment with Versions
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    env:
+      AWS_REGION: us-east-1
+      S3_BUCKET: myapp-prod
+      DISTRIBUTION_ID: <Your_CloudFront_Distribution_ID>
+      VERSION_DIR: v2  # デプロイしたいバージョンディレクトリ
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Sync to Version Directory
+        run: |
+          aws s3 sync . s3://${{ env.S3_BUCKET }}/${{ env.VERSION_DIR }} --delete
+
+      - name: Update CloudFront Origin
+        run: |
+          NEW_ORIGIN="${{ env.VERSION_DIR }}Origin"
+          aws cloudfront get-distribution-config --id ${{ env.DISTRIBUTION_ID }} > distro-config.json
+          jq --arg new_origin "$NEW_ORIGIN" '.DistributionConfig.DefaultCacheBehavior.TargetOriginId = $new_origin' distro-config.json > distro-config-updated.json
+          aws cloudfront update-distribution --id ${{ env.DISTRIBUTION_ID }} --if-match $(jq -r '.ETag' distro-config.json) --distribution-config file://distro-config-updated.json
+
+      - name: Invalidate CloudFront Cache
+        run: |
+          aws cloudfront create-invalidation --distribution-id ${{ env.DISTRIBUTION_ID }} --paths "/*"
