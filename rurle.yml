@@ -1,0 +1,207 @@
+WSTemplateFormatVersion: '2010-09-09'
+Description: Fargate Services with ALB Path-based Routing
+
+Resources:
+  # VPCの作成
+  MyVPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.0.0.0/16
+
+  # Subnetsの作成 (2つのサブネットを作成)
+  MySubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref MyVPC
+      CidrBlock: 10.0.1.0/24
+      AvailabilityZone: !Select [ 0, !GetAZs '' ]
+
+  MySubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref MyVPC
+      CidrBlock: 10.0.2.0/24
+      AvailabilityZone: !Select [ 1, !GetAZs '' ]
+
+  # ALBの作成
+  MyALB:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: MyALB
+      Subnets:
+        - !Ref MySubnet1
+        - !Ref MySubnet2
+      Scheme: internet-facing
+      LoadBalancerAttributes:
+        - Key: idle_timeout.timeout_seconds
+          Value: '60'
+
+  # ALBリスナーの作成 (HTTPポート 80)
+  MyListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+        - Type: fixed-response
+          FixedResponseConfig:
+            StatusCode: 404
+            ContentType: text/plain
+            MessageBody: 'Not Found'
+      LoadBalancerArn: !Ref MyALB
+      Port: 80
+      Protocol: HTTP
+
+  # ターゲットグループ1 (Service1)
+  MyTargetGroup1:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      VpcId: !Ref MyVPC
+      Port: 80
+      Protocol: HTTP
+      TargetType: ip
+      HealthCheckPath: /
+      HealthCheckIntervalSeconds: 30
+      HealthCheckTimeoutSeconds: 5
+      HealthyThresholdCount: 5
+      UnhealthyThresholdCount: 2
+
+  # ターゲットグループ2 (Service2)
+  MyTargetGroup2:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      VpcId: !Ref MyVPC
+      Port: 80
+      Protocol: HTTP
+      TargetType: ip
+      HealthCheckPath: /
+      HealthCheckIntervalSeconds: 30
+      HealthCheckTimeoutSeconds: 5
+      HealthyThresholdCount: 5
+      UnhealthyThresholdCount: 2
+
+  # ECS Clusterの作成
+  MyCluster:
+    Type: AWS::ECS::Cluster
+
+  # ECS Task Definition 1 (Service1用)
+  MyTaskDefinition1:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: "MyTaskDefinition1"
+      Cpu: "256"
+      Memory: "512"
+      NetworkMode: awsvpc
+      RequiresCompatibilities: [FARGATE]
+      ExecutionRoleArn: !GetAtt ECSRole.Arn
+      ContainerDefinitions:
+        - Name: service1-container
+          Image: amazon/amazon-ecs-sample
+          PortMappings:
+            - ContainerPort: 80
+              Protocol: tcp
+
+  # ECS Task Definition 2 (Service2用)
+  MyTaskDefinition2:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: "MyTaskDefinition2"
+      Cpu: "256"
+      Memory: "512"
+      NetworkMode: awsvpc
+      RequiresCompatibilities: [FARGATE]
+      ExecutionRoleArn: !GetAtt ECSRole.Arn
+      ContainerDefinitions:
+        - Name: service2-container
+          Image: amazon/amazon-ecs-sample
+          PortMappings:
+            - ContainerPort: 80
+              Protocol: tcp
+
+  # ECS Service 1 (Service1)
+  MyService1:
+    Type: AWS::ECS::Service
+    Properties:
+      Cluster: !Ref MyCluster
+      TaskDefinition: !Ref MyTaskDefinition1
+      DesiredCount: 1
+      LaunchType: FARGATE
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: ENABLED
+          Subnets:
+            - !Ref MySubnet1
+            - !Ref MySubnet2
+      LoadBalancers:
+        - ContainerName: service1-container
+          ContainerPort: 80
+          TargetGroupArn: !Ref MyTargetGroup1
+
+  # ECS Service 2 (Service2)
+  MyService2:
+    Type: AWS::ECS::Service
+    Properties:
+      Cluster: !Ref MyCluster
+      TaskDefinition: !Ref MyTaskDefinition2
+      DesiredCount: 1
+      LaunchType: FARGATE
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: ENABLED
+          Subnets:
+            - !Ref MySubnet1
+            - !Ref MySubnet2
+      LoadBalancers:
+        - ContainerName: service2-container
+          ContainerPort: 80
+          TargetGroupArn: !Ref MyTargetGroup2
+
+  # パスベースルーティングの設定
+  PathBasedRoutingRule:
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    Properties:
+      ListenerArn: !Ref MyListener
+      Conditions:
+        - Field: path-pattern
+          Values: [ "/service1/*" ]
+      Actions:
+        - Type: forward
+          TargetGroupArn: !Ref MyTargetGroup1
+      Priority: 1
+
+  PathBasedRoutingRule2:
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    Properties:
+      ListenerArn: !Ref MyListener
+      Conditions:
+        - Field: path-pattern
+          Values: [ "/service2/*" ]
+      Actions:
+        - Type: forward
+          TargetGroupArn: !Ref MyTargetGroup2
+      Priority: 2
+
+  # ECS IAM ロール
+  ECSRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: ECSExecutionPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "logs:CreateLogGroup"
+                  - "logs:CreateLogStream"
+                  - "logs:PutLogEvents"
+                  - "ecr:GetDownloadUrlForLayer"
+                  - "ecr:BatchGetImage"
+                  - "ecs:DescribeServices"
+                  - "ec2:DescribeNetworkInterfaces"
+                Resource: "*"
